@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <threads.h>
+#include <chrono>
 
 #define FILE_OUT "parallel.bmp"
 
@@ -21,6 +22,7 @@ int const MAX_ROW = 1000, MAX_COL = 1000;
 
 unsigned char picture_input[MAX_ROW][MAX_COL][3];
 unsigned char picture_output[MAX_ROW][MAX_COL][3];
+unsigned char temp_picture[MAX_ROW][MAX_COL][3];
 bool ok[MAX_ROW][MAX_COL][3];
 int const SIZE_ROWS_READ = 8, SIZE_ROWS_FILTER = 100;
 
@@ -179,24 +181,6 @@ void getPixlesFromBMP24(int end, int rows, int cols, char *fileReadBuffer) {
     }
   }
 
-//  pthread_t *row_threads = new pthread_t[rows];
-//  for (long i = 0; i < rows; ++i) {
-//    bool error = pthread_create(&row_threads[i], NULL, copy_col, (void *) i);
-//    if (error) {
-//      cout << "HAHA" << endl;
-//      cout << "Error creating thread" << endl;
-//      exit(1);
-//    }
-//  }
-//
-//  for (int i = 0; i < rows; ++i) {
-//    bool error = pthread_join(row_threads[i], NULL);
-//    if (error) {
-//      cout << "Error joining thread" << endl;
-//      exit(1);
-//    }
-//  }
-//  delete[] row_threads;
   delete[] messages;
   delete[] threads_all;
 }
@@ -267,7 +251,7 @@ void *filter_horizontal(void *arg) {
   long color = (long) arg;
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; j++) {
-      picture_output[i][j][color] = picture_input[rows - 1 - i][j][color];
+      temp_picture[i][j][color] = picture_input[rows - 1 - i][j][color];
     }
   }
   pthread_exit(NULL);
@@ -275,15 +259,9 @@ void *filter_horizontal(void *arg) {
 
 void *filter_vertical(void *arg) {
   long color = (long) arg;
-  unsigned char temp[rows][cols][3];
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; j++) {
-      temp[i][j][color] = picture_output[i][cols - 1 - j][color];
-    }
-  }
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; j++) {
-      picture_output[i][j][color] = temp[i][j][color];
+      picture_output[i][j][color] = temp_picture[i][cols - 1 - j][color];
     }
   }
   pthread_exit(NULL);
@@ -390,8 +368,7 @@ void filter_parallel_color() {
 }
 
 int main(int argc, char *argv[]) {
-  clock_t start_time, end_time;
-  start_time = clock();
+  auto start_time = std::chrono::high_resolution_clock::now();
   char *fileBuffer;
   int bufferSize;
   char *fileName = argv[1];
@@ -404,7 +381,8 @@ int main(int argc, char *argv[]) {
   filter_parallel_vertical();
   filter_parallel_color();
   writeOutBmp24(fileBuffer, FILE_OUT, bufferSize);
-  end_time = clock();
-  cout << "Execution Time: " << (int) (((double) (end_time - start_time) / CLOCKS_PER_SEC) * 1000) << endl;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+  cout << "Execution Time: " << ms_int << endl;
   return 0;
 }

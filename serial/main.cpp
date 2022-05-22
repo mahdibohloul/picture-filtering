@@ -1,6 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
+#include <chrono>
 
 #define FILE_OUT "serial.bmp"
 
@@ -258,8 +259,7 @@ void add_cross(PixelColor **&input) {
 }
 
 int main(int argc, char *argv[]) {
-  clock_t start_time, end_time;
-  start_time = clock();
+  auto start_time = std::chrono::high_resolution_clock::now();
   char *fileBuffer;
   int bufferSize;
   char *fileName = argv[1];
@@ -277,7 +277,8 @@ int main(int argc, char *argv[]) {
   filter_reflex_color(picture_input);
   add_cross(picture_input);
   writeOutBmp24(fileBuffer, FILE_OUT, bufferSize, picture_input);
-  end_time = clock();
-  cout << "Execution Time: " << (int) (((double) (end_time - start_time) / CLOCKS_PER_SEC) * 1000) << endl;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+  cout << "Execution Time: " << ms_int << endl;
   return 0;
 }
